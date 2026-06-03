@@ -415,7 +415,7 @@ export default function ReportsPage() {
     };
 
     fetchReports();
-  }, [userId, start, end, dayNames, lang, locale, logLabels, period]);
+  }, [userId, start, end, dayNames, lang, locale, logLabels, period, formatDate]);
 
   // Helper to render user initials or gradient avatar
   const renderAvatar = () => {
