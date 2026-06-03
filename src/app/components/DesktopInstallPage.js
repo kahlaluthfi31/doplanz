@@ -58,33 +58,36 @@ export default function DesktopInstallPage() {
     }, [appUrl]);
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-indigo-50 to-white px-6 py-12 font-sans dark:from-slate-950 dark:to-slate-900">
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-indigo-50 via-white to-indigo-50 px-6 py-12 font-sans text-indigo-950">
             <div className="mx-auto w-full max-w-md space-y-8 text-center">
                 <div className="flex justify-center">
-                    <Image
-                        src="/images/doplanz-logo.png"
-                        alt="doplanZ"
-                        width={80}
-                        height={80}
-                        className="rounded-2xl shadow-md"
-                        priority
-                    />
+                    <div className="rounded-2xl bg-white px-6 py-4 shadow-lg ring-2 ring-indigo-100 dark:ring-indigo-200">
+                        <Image
+                            src="/images/doplanz-logo.png"
+                            alt="doplanZ"
+                            width={160}
+                            height={48}
+                            priority
+                            className="h-auto w-[160px] max-w-none object-contain"
+                            unoptimized
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-2">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500 text-white shadow-lg">
                         <FaMobileScreen className="text-2xl" />
                     </div>
-                    <h1 className="text-xl font-extrabold text-indigo-900 dark:text-white">
+                    <h1 className="text-xl font-extrabold text-indigo-900">
                         {t(lang, 'installDesktopTitle')}
                     </h1>
-                    <p className="text-sm text-indigo-500 dark:text-indigo-300">
+                    <p className="text-sm text-indigo-600">
                         {t(lang, 'installDesktopSubtitle')}
                     </p>
                 </div>
 
                 {qrSrc && (
-                    <div className="rounded-3xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                    <div className="rounded-3xl border border-indigo-100 bg-white p-5 shadow-md">
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                             {t(lang, 'installDesktopScan')}
                         </p>
@@ -96,7 +99,7 @@ export default function DesktopInstallPage() {
                             height={220}
                             className="mx-auto rounded-xl"
                         />
-                        <p className="mt-3 break-all text-[11px] font-semibold text-indigo-600 dark:text-indigo-300">
+                        <p className="mt-3 break-all text-[11px] font-semibold text-indigo-700">
                             {appUrl}
                         </p>
                     </div>
@@ -111,7 +114,7 @@ export default function DesktopInstallPage() {
                     {t(lang, 'installDesktopButton')}
                 </button>
 
-                <p className="text-[11px] leading-relaxed text-indigo-400 dark:text-slate-400">
+                <p className="text-[11px] leading-relaxed text-indigo-500">
                     {t(lang, 'installDesktopHint')}
                 </p>
             </div>
