@@ -72,9 +72,26 @@ const getDerivedStatus = (task, now = new Date()) => {
     return storedStatus === 'in_progress' ? 'in_progress' : 'pending';
 };
 
-export default function TasksContent({ filter = 'all', period = 'week' }) {
-    const activeFilter = FILTERS.includes(filter) ? filter : 'all';
-    const activePeriod = PERIODS.includes(period) ? period : 'week';
+const getQueryFromUrl = () => {
+    if (typeof window === 'undefined') {
+        return { filter: 'all', period: 'week' };
+    }
+    const params = new URLSearchParams(window.location.search);
+    const filter = params.get('filter') || 'all';
+    const period = params.get('period') || 'week';
+    return {
+        filter: FILTERS.includes(filter) ? filter : 'all',
+        period: PERIODS.includes(period) ? period : 'week',
+    };
+};
+
+export default function TasksContent() {
+    const [query, setQuery] = useState({ filter: 'all', period: 'week' });
+    const { filter: activeFilter, period: activePeriod } = query;
+
+    useEffect(() => {
+        setQuery(getQueryFromUrl());
+    }, []);
     const { language } = useLanguage();
     const { formatDate } = useSettings();
     const lang = language || 'id';
