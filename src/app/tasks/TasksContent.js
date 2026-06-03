@@ -72,16 +72,23 @@ const getDerivedStatus = (task, now = new Date()) => {
     return storedStatus === 'in_progress' ? 'in_progress' : 'pending';
 };
 
-const getQueryFromUrl = () => {
+const readFiltersFromLocation = () => {
     if (typeof window === 'undefined') {
         return { filter: 'all', period: 'week' };
     }
-    const params = new URLSearchParams(window.location.search);
-    const filter = params.get('filter') || 'all';
-    const period = params.get('period') || 'week';
+    const result = { filter: 'all', period: 'week' };
+    const query = window.location.search.replace(/^\?/, '');
+    if (!query) return result;
+    for (const part of query.split('&')) {
+        const [key, raw] = part.split('=');
+        if (!raw) continue;
+        const value = decodeURIComponent(raw);
+        if (key === 'filter') result.filter = value;
+        if (key === 'period') result.period = value;
+    }
     return {
-        filter: FILTERS.includes(filter) ? filter : 'all',
-        period: PERIODS.includes(period) ? period : 'week',
+        filter: FILTERS.includes(result.filter) ? result.filter : 'all',
+        period: PERIODS.includes(result.period) ? result.period : 'week',
     };
 };
 
@@ -90,7 +97,7 @@ export default function TasksContent() {
     const { filter: activeFilter, period: activePeriod } = query;
 
     useEffect(() => {
-        setQuery(getQueryFromUrl());
+        setQuery(readFiltersFromLocation());
     }, []);
     const { language } = useLanguage();
     const { formatDate } = useSettings();
