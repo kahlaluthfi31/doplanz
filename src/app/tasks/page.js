@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FaChevronLeft, FaCheck, FaHourglassHalf, FaClock } from 'react-icons/fa6';
 import { t } from '../../lib/i18n';
@@ -73,7 +73,7 @@ const getDerivedStatus = (task, now = new Date()) => {
     return storedStatus === 'in_progress' ? 'in_progress' : 'pending';
 };
 
-export default function TasksPage() {
+function TasksContent() {
     const searchParams = useSearchParams();
     const filter = searchParams.get('filter') || 'all';
     const activeFilter = FILTERS.includes(filter) ? filter : 'all';
@@ -140,33 +140,33 @@ export default function TasksPage() {
         fetchTasks();
     }, [user?.id]);
 
-        const filteredTasks = useMemo(() => {
-            const now = new Date();
-            const { start, end } = getDateRange(activePeriod);
-            return tasks.filter(task => {
-                const due = toDateTime(task);
-                if (!due) return false;
-                if (due < start || due > end) return false;
-                const status = getDerivedStatus(task, now);
-                const isOverdue = due < now && status !== 'completed';
-                if (activeFilter === 'completed') return status === 'completed';
-                if (activeFilter === 'in_progress') return status === 'in_progress';
-                if (activeFilter === 'overdue') return isOverdue;
-                return true;
-            });
-        }, [tasks, activeFilter, activePeriod]);
+    const filteredTasks = useMemo(() => {
+        const now = new Date();
+        const { start, end } = getDateRange(activePeriod);
+        return tasks.filter(task => {
+            const due = toDateTime(task);
+            if (!due) return false;
+            if (due < start || due > end) return false;
+            const status = getDerivedStatus(task, now);
+            const isOverdue = due < now && status !== 'completed';
+            if (activeFilter === 'completed') return status === 'completed';
+            if (activeFilter === 'in_progress') return status === 'in_progress';
+            if (activeFilter === 'overdue') return isOverdue;
+            return true;
+        });
+    }, [tasks, activeFilter, activePeriod]);
 
     const headerLabel = useMemo(() => {
-            switch (activeFilter) {
-                case 'completed':
-                    return t(lang, 'reportsCompleted');
-                case 'in_progress':
-                    return t(lang, 'reportsPending');
-                case 'overdue':
-                    return t(lang, 'reportsOverdue');
-                default:
-                    return t(lang, 'reportsTotalTasks');
-            }
+        switch (activeFilter) {
+            case 'completed':
+                return t(lang, 'reportsCompleted');
+            case 'in_progress':
+                return t(lang, 'reportsPending');
+            case 'overdue':
+                return t(lang, 'reportsOverdue');
+            default:
+                return t(lang, 'reportsTotalTasks');
+        }
     }, [activeFilter, lang]);
 
     const statusMeta = useMemo(
@@ -259,5 +259,20 @@ export default function TasksPage() {
                 )}
             </div>
         </main>
+    );
+}
+
+// --- PEMBUNGKUS UTAMA DENGAN SUSPENSE UNTUK VERCEL ---
+export default function TasksPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen w-full items-center justify-center bg-white dark:bg-slate-950">
+                <div className="rounded-2xl border border-indigo-100 bg-white p-6 text-center text-xs font-semibold text-indigo-400 shadow-sm animate-pulse">
+                    Memuat halaman...
+                </div>
+            </div>
+        }>
+            <TasksContent />
+        </Suspense>
     );
 }
