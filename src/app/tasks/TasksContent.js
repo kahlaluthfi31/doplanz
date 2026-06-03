@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { FaChevronLeft, FaCheck, FaHourglassHalf, FaClock } from 'react-icons/fa6';
 import { t } from '../../lib/i18n';
 import { useLanguage } from '../components/LanguageProvider';
@@ -73,16 +72,12 @@ const getDerivedStatus = (task, now = new Date()) => {
     return storedStatus === 'in_progress' ? 'in_progress' : 'pending';
 };
 
-export default function TasksContent() {
-    const searchParams = useSearchParams();
-    const filter = searchParams.get('filter') || 'all';
+export default function TasksContent({ filter = 'all', period = 'week' }) {
     const activeFilter = FILTERS.includes(filter) ? filter : 'all';
-    const periodParam = searchParams.get('period') || 'week';
-    const activePeriod = PERIODS.includes(periodParam) ? periodParam : 'week';
+    const activePeriod = PERIODS.includes(period) ? period : 'week';
     const { language } = useLanguage();
     const { formatDate } = useSettings();
     const lang = language || 'id';
-    const locale = lang === 'en' ? 'en-US' : 'id-ID';
     const [user, setUser] = useState(null);
     const [tasks, setTasks] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
