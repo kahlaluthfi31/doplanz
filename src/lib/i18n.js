@@ -328,7 +328,16 @@ export const TRANSLATIONS = {
     auth2FARequired: 'Akun ini memerlukan kode 2FA.',
     testSoundPlayed: 'Suara notifikasi diuji.',
     format12hSample: '1:30 PM',
-    format24hSample: '13:30'
+    format24hSample: '13:30',
+    installDesktopTitle: 'doplanZ untuk HP & Tablet',
+    installDesktopSubtitle: 'Aplikasi ini tidak dapat digunakan di laptop atau komputer. Buka di ponsel atau tablet Anda.',
+    installDesktopButton: 'Install aplikasi di perangkat',
+    installDesktopHint: 'Di komputer, tombol ini hanya mengunduh file panduan (HTML). Aplikasi tidak terpasang sebagai program desktop. Buka situs di HP/tablet lalu pilih Tambahkan ke Layar Utama.',
+    installDesktopScan: 'Pindai dengan kamera HP',
+    installMobileTitle: 'Pasang doplanZ di layar utama',
+    installMobileButton: 'Install aplikasi',
+    installIosHint: 'Di iPhone/iPad: tap ikon Share (kotak dengan panah) → "Add to Home Screen" / "Tambahkan ke Layar Utama".',
+    installAndroidHint: 'Di Chrome Android: menu ⋮ → "Install app" / "Tambahkan ke Layar Utama".'
   },
   en: {
     profileTitle: 'My Profile',
@@ -658,7 +667,16 @@ export const TRANSLATIONS = {
     auth2FARequired: 'This account requires a 2FA code.',
     testSoundPlayed: 'Notification sound tested.',
     format12hSample: '1:30 PM',
-    format24hSample: '13:30'
+    format24hSample: '13:30',
+    installDesktopTitle: 'doplanZ for Phone & Tablet',
+    installDesktopSubtitle: 'This app cannot be used on laptops or desktops. Open it on your phone or tablet.',
+    installDesktopButton: 'Install app on device',
+    installDesktopHint: 'On a computer, this button only downloads a guide file (HTML). The app will not install as desktop software. Open the site on your phone/tablet and choose Add to Home Screen.',
+    installDesktopScan: 'Scan with your phone camera',
+    installMobileTitle: 'Install doplanZ on your home screen',
+    installMobileButton: 'Install app',
+    installIosHint: 'On iPhone/iPad: tap Share → "Add to Home Screen".',
+    installAndroidHint: 'On Chrome Android: menu ⋮ → "Install app" or "Add to Home screen".'
   },
   su: {
     profileTitle: 'Profil Abdi',

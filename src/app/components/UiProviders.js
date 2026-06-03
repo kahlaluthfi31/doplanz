@@ -6,6 +6,7 @@ import { ModalProvider } from './ModalProvider';
 import GoogleAuthProvider from './GoogleAuthProvider';
 import { SettingsProvider } from './SettingsProvider';
 import TaskReminderListener from './TaskReminderListener';
+import DeviceGate from './DeviceGate';
 
 export default function UiProviders({ children }) {
   const mediaQueryRef = useRef(null);
@@ -83,7 +84,7 @@ export default function UiProviders({ children }) {
         <LanguageProvider>
           <ModalProvider>
             <TaskReminderListener />
-            {children}
+            <DeviceGate>{children}</DeviceGate>
           </ModalProvider>
         </LanguageProvider>
       </SettingsProvider>

@@ -15,11 +15,24 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "doplanZ",
   description: "Do it, Plan it",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "doplanZ",
+  },
+  applicationName: "doplanZ",
+  icons: {
+    apple: "/images/doplanz-logo.png",
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({ children }) {
