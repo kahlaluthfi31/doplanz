@@ -72,7 +72,7 @@ export default function DesktopInstallPage() {
     const showInstallSteps = isMobile && !isStandalonePwa();
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-indigo-50 via-white to-indigo-50 px-6 py-12 font-sans text-indigo-950 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-indigo-100">
+        <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12 font-sans text-indigo-950 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-indigo-100">
             <div className="mx-auto w-full max-w-md space-y-6 text-center">
                 <div className="flex justify-center">
                     <Image
@@ -106,7 +106,7 @@ export default function DesktopInstallPage() {
                 )}
 
                 {qrSrc && (
-                    <div className="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                    <div className="p-5 dark:border-slate-700 dark:bg-slate-900">
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                             {t(lang, 'installDesktopScan')}
                         </p>
@@ -116,7 +116,7 @@ export default function DesktopInstallPage() {
                             alt="QR"
                             width={180}
                             height={180}
-                            className="mx-auto rounded-xl"
+                            className="mx-auto"
                         />
                         <p className="mt-3 break-all text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">
                             {appUrl}
