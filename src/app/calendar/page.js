@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import UserAvatar from '../components/UserAvatar';
+import { loadStoredUser, syncUserFromApi } from '../../lib/user';
 import { 
   FaPlus, 
   FaRegBell, 
@@ -25,14 +26,6 @@ import { useSettings } from '../components/SettingsProvider';
 
 const VIEW_OPTIONS = ['day', 'week', 'month'];
 const FILTERS = ['all', 'todo', 'in_progress', 'completed'];
-
-const mockGroups = [
-  { id: 'g1', nameKey: 'groupOffice', color: '#4C6FFF' },
-  { id: 'g2', nameKey: 'groupPersonal', color: '#FF8A4C' },
-  { id: 'g3', nameKey: 'groupStudy', color: '#F6C76B' }
-];
-
-
 const isSameDay = (left, right) =>
   left.getFullYear() === right.getFullYear() &&
   left.getMonth() === right.getMonth() &&
@@ -133,30 +126,29 @@ export default function CalendarPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Load user
-    const storedUser = window.localStorage.getItem('todo_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        
-        // Load user settings to respect preferences
-        fetch(`/api/users/settings`, {
-          headers: { 'x-user-id': parsed.id }
-        }).then(res => {
-          if (res.ok) {
-            res.json().then(settings => {
-              if (settings.weekStartsOn) {
-                setWeekStartsOn(settings.weekStartsOn);
-              }
-            });
+
+    const parsed = loadStoredUser();
+    if (!parsed?.id) return;
+    setUser(parsed);
+
+    syncUserFromApi(parsed.id).then((fresh) => {
+      if (fresh) setUser(fresh);
+    });
+
+    fetch('/api/users/settings', {
+      headers: { 'x-user-id': parsed.id }
+    }).then((res) => {
+      if (res.ok) {
+        res.json().then((settings) => {
+          if (settings.weekStartsOn) {
+            setWeekStartsOn(settings.weekStartsOn);
           }
         });
-      } catch (e) {}
-    }
+      }
+    });
+  }, []);
 
-    // Load actual tasks from API
+  useEffect(() => {
     fetchTodos();
     fetchGroups();
   }, [fetchTodos, fetchGroups]);
@@ -177,7 +169,6 @@ export default function CalendarPage() {
   }, [user?.id, setLanguage]);
 
   const handleUpdateStatus = async (task, nextStatus) => {
-    if (task?.isMock) return;
     if (!task?.id) return;
     if (!user?.id) return;
 
@@ -297,52 +288,16 @@ export default function CalendarPage() {
     }
   };
 
-  // Merge database tasks & mock tasks
   const combinedTasks = useMemo(() => {
-    const list = [...todos.map(t => ({
+    return todos.map((t) => ({
       id: t._id,
       title: t.title,
       groupId: t.groupId || null,
       status: t.status || 'pending',
       dueDate: t.dueDate ? new Date(t.dueDate) : new Date(),
-      dueTime: t.dueTime || (t.dueDate ? new Date(t.dueDate).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '10:00'),
-      isMock: false
-    }))];
-    
-    // Add mock tasks if list is empty
-    if (list.length === 0) {
-      return [
-        {
-          id: 't1',
-          title: t(lang, 'calendarMockTaskResearch'),
-          groupId: 'g1',
-          status: 'completed',
-          dueDate: new Date(),
-          dueTime: '10:00',
-          isMock: true
-        },
-        {
-          id: 't2',
-          title: t(lang, 'calendarMockTaskAnalysis'),
-          groupId: 'g1',
-          status: 'in_progress',
-          dueDate: new Date(),
-          dueTime: '12:00',
-          isMock: true
-        },
-        {
-          id: 't3',
-          title: t(lang, 'calendarMockTaskWireframe'),
-          groupId: 'g2',
-          status: 'pending',
-          dueDate: new Date(),
-          dueTime: '19:00',
-          isMock: true
-        }
-      ];
-    }
-    return list;
-  }, [todos, locale, lang]);
+      dueTime: t.dueTime || (t.dueDate ? new Date(t.dueDate).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '10:00')
+    }));
+  }, [todos, locale]);
 
   const filteredTasks = useMemo(() => {
     const tasksForDate = combinedTasks.filter(task => isSameDay(task.dueDate, activeDate));
@@ -371,19 +326,12 @@ export default function CalendarPage() {
   };
 
   const displayGroups = useMemo(() => {
-    if (groups.length > 0) {
-      return groups.map(group => ({
-        id: group._id,
-        name: group.name,
-        color: group.color || '#4C6FFF'
-      }));
-    }
-    return mockGroups.map(group => ({
-      id: group.id,
-      name: t(lang, group.nameKey),
-      color: group.color
+    return groups.map((group) => ({
+      id: group._id,
+      name: group.name,
+      color: group.color || '#4C6FFF'
     }));
-  }, [groups, lang]);
+  }, [groups]);
 
   const groupMap = useMemo(
     () => new Map(displayGroups.map(group => [group.id, group])),
@@ -429,26 +377,6 @@ export default function CalendarPage() {
     return map;
   }, [combinedTasks, groupMap]);
 
-  // Helper to render user initials or avatar
-  const renderAvatar = () => {
-  const defaultStyle = "h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold ring-2 ring-indigo-100 shadow-md relative dark:ring-slate-800";
-    if (user?.avatarUrl) {
-      return (
-        <Image
-          src={user.avatarUrl}
-          alt="User Profile"
-          width={40}
-          height={40}
-          className="h-10 w-10 rounded-full object-cover ring-2 ring-indigo-100 shadow-md dark:ring-slate-800"
-        />
-      );
-    }
-    return (
-      <div className={`${defaultStyle} bg-indigo-500`}>
-        {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'LV'}
-      </div>
-    );
-  };
 
   return (
   <main className="min-h-screen bg-white px-6 pb-28 pt-8 font-sans dark:bg-slate-950 dark:text-slate-100">
@@ -457,7 +385,7 @@ export default function CalendarPage() {
         {/* Dynamic Premium Header */}
         <header className="flex items-center justify-between">
           <Link href="/profile" className="flex items-center gap-3 active:scale-95 transition-transform">
-            {renderAvatar()}
+            <UserAvatar user={user} size={40} />
             <div>
               <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider dark:text-indigo-200">{t(lang, 'calendarTitle')}</p>
               <h1 className="text-base font-extrabold text-indigo-600 dark:text-indigo-100">
@@ -465,15 +393,19 @@ export default function CalendarPage() {
               </h1>
             </div>
           </Link>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-indigo-400 hover:text-indigo-600 dark:bg-slate-900 dark:text-indigo-200 dark:hover:text-indigo-100">
+          <Link
+            href="/notifications"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-indigo-400 hover:text-indigo-600 dark:bg-slate-900 dark:text-indigo-200 dark:hover:text-indigo-100"
+            aria-label={t(lang, 'notifications')}
+          >
             <FaRegBell className="text-base" />
-          </button>
+          </Link>
         </header>
 
         {/* Dynamic Premium Calendar Card */}
         <section className="rounded-3xl bg-white p-5 shadow-sm border border-indigo-50 space-y-4 dark:bg-slate-900 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-0.5 bg-indigo-50 p-1 rounded-2xl dark:bg-slate-800">
+            <div className="flex items-center gap-0.5 bg-indigo-500 p-1 rounded-2xl">
               <button
                 onClick={() => {
                   if (view === 'month') {
@@ -522,7 +454,7 @@ export default function CalendarPage() {
                   onClick={() => setView(option)}
                   className={`rounded-full px-3.5 py-1.5 transition-all duration-200 ${
                     view === option
-                      ? 'bg-indigo-600 text-white shadow-sm dark:bg-indigo-500'
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-500'
                       : 'text-indigo-500 hover:text-indigo-700 dark:text-indigo-200 dark:hover:text-indigo-100'
                   }`}
                 >
@@ -564,7 +496,7 @@ export default function CalendarPage() {
                           {t(lang, 'calendarTasksCount', { count: stats.count })}
                         </span>
                       ) : (
-                        <span className="rounded-xl bg-white/60 px-3 py-1.5 text-[10px] font-bold text-indigo-300 dark:bg-slate-900 dark:text-indigo-200">
+                        <span className="rounded-xl bg-white/60 px-3 py-1.5 text-[10px] font-bold text-indigo-500 dark:bg-slate-900 dark:text-indigo-200">
                           {t(lang, 'calendarNoTasks')}
                         </span>
                       )}
@@ -600,11 +532,11 @@ export default function CalendarPage() {
                       onClick={() => setActiveDate(date)}
                       className={`flex min-w-[58px] max-w-[58px] flex-col items-center rounded-2xl py-3 text-xs transition-all active:scale-95 ${
                         isActive 
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-102 dark:bg-indigo-500 dark:shadow-indigo-900/40' 
-                          : 'bg-indigo-50/60 border border-indigo-100 text-indigo-700 hover:bg-indigo-50 dark:bg-slate-900 dark:border-slate-800 dark:text-indigo-200'
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 scale-100 dark:bg-indigo-500 dark:shadow-indigo-900/80' 
+                          : 'bg-indigo-300/80 text-indigo-700 dark:bg-slate-900 dark:border-slate-800 dark:text-indigo-200'
                       }`}
                     >
-                      <span className={`text-[8px] font-bold uppercase tracking-wider ${isActive ? 'text-indigo-200' : 'text-indigo-400 dark:text-indigo-300'}`}>
+                      <span className={`text-[8px] font-bold uppercase tracking-wider ${isActive ? 'text-indigo-100' : 'text-indigo-800 dark:text-indigo-300'}`}>
                         {date.toLocaleDateString(locale, { weekday: 'short' })}
                       </span>
                       <span className="text-base font-black mt-1 leading-none">{date.getDate()}</span>
@@ -649,8 +581,8 @@ export default function CalendarPage() {
                       onClick={() => setActiveDate(date)}
                       className={`flex h-10 flex-col items-center justify-between rounded-xl py-1 text-xs transition-all active:scale-90 relative ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 dark:bg-indigo-500 dark:shadow-indigo-900/40'
-                          : 'bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 border border-transparent hover:border-indigo-200 dark:bg-slate-900 dark:text-indigo-200 dark:hover:bg-slate-800'
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100 dark:bg-indigo-500 dark:shadow-indigo-900/80'
+                          : 'bg-indigo-200/80 text-indigo-700 dark:bg-slate-900 dark:border-slate-800 dark:text-indigo-200'
                       }`}
                     >
                       <span className={`text-[10px] font-bold ${isOverdue && !isActive ? 'text-indigo-600 font-extrabold dark:text-indigo-200' : ''}`}>
@@ -676,7 +608,7 @@ export default function CalendarPage() {
         {/* Dynamic Filters Bar */}
         <section className="-mx-6 overflow-x-auto scrollbar-none">
           <div className="flex gap-2.5 px-6">
-            <span className="flex h-8 items-center gap-1.5 rounded-full bg-indigo-100 px-3 text-[10px] font-bold text-indigo-600 dark:bg-slate-800 dark:text-indigo-100">
+            <span className="flex h-8 items-center gap-1.5 rounded-full bg-indigo-500 text-white dark:bg-slate-900 dark:text-white px-3 text-[10px] font-bold">
               <FaFilter /> {t(lang, 'filterLabel')}
             </span>
             {FILTERS.map(tab => (
@@ -714,56 +646,54 @@ export default function CalendarPage() {
               return (
                 <div 
                   key={task.id} 
-                  className="rounded-2xl bg-white p-4 shadow-sm border border-indigo-50 border-l-4 hover:scale-[1.01] hover:shadow transition-all duration-200 flex items-center justify-between gap-3 cursor-pointer dark:bg-slate-900 dark:border-slate-800"
+                  className="rounded-2xl bg-white p-4 shadow-sm border-l-4 hover:scale-[1.01] hover:shadow transition-all duration-200 flex items-center justify-between gap-3 cursor-pointer dark:bg-slate-900 dark:border-slate-800"
                   style={{ borderLeftColor: borderColor }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center justify-center bg-indigo-50 rounded-xl px-2.5 py-1.5 border border-indigo-100 text-indigo-600 font-bold shrink-0 min-w-[56px] dark:bg-slate-800 dark:border-slate-700 dark:text-indigo-100">
-                      <FaClock className="text-[9px] text-indigo-500 mb-0.5 dark:text-indigo-200" />
-                      <span className="text-[9px] tracking-tight text-indigo-500 dark:text-indigo-200">{formatTime(task.dueTime)}</span>
+                    <div className="flex flex-col items-center justify-center bg-indigo-500 text-white rounded-xl px-2.5 py-1.5 font-bold shrink-0 min-w-[56px]">
+                      <FaClock className="text-[9px] mb-0.5" />
+                      <span className="text-[9px] tracking-tight">{formatTime(task.dueTime)}</span>
                     </div>
                     
                     <div className="space-y-0.5">
                       <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider dark:text-indigo-200">
                         {group?.name || t(lang, 'calendarGeneralWorkspace')}
                       </p>
-                      <p className="text-xs font-bold text-indigo-900 leading-snug line-clamp-1 dark:text-indigo-100">{task.title}</p>
+                      <p className="text-xs font-bold text-indigo-600 leading-snug line-clamp-1 dark:text-indigo-100">{task.title}</p>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    {!task.isMock && (
-                      <div className="relative" data-task-menu="calendar">
-                        <button
-                          onClick={() => setMenuOpenId(menuOpenId === task.id ? null : task.id)}
-                          className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-slate-800 dark:text-indigo-100"
-                        >
-                          <FaEllipsisVertical className="text-xs" />
-                        </button>
-                        {menuOpenId === task.id && (
-                          <div className="absolute right-0 top-9 z-10 w-32 rounded-xl border border-indigo-100 bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
-                            <button
-                              onClick={() => openEditModal(task.id)}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-100 dark:hover:bg-slate-800"
-                            >
-                              <FaPen className="text-[10px]" /> {t(lang, 'editAction')}
-                            </button>
-                            <button
-                              onClick={() => handleDelete(task.id)}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-100 dark:hover:bg-slate-800"
-                            >
-                              <FaTrash className="text-[10px]" /> {t(lang, 'deleteAction')}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex rounded-full bg-indigo-100 p-0.5 text-[8px] font-bold dark:bg-slate-800">
+                    <div className="relative" data-task-menu="calendar">
+                      <button
+                        onClick={() => setMenuOpenId(menuOpenId === task.id ? null : task.id)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-500 text-white"
+                      >
+                        <FaEllipsisVertical className="text-xs" />
+                      </button>
+                      {menuOpenId === task.id && (
+                        <div className="absolute right-0 top-9 z-10 w-32 rounded-xl border border-indigo-100 bg-white shadow-lg dark:bg-slate-900 dark:border-slate-700">
+                          <button
+                            onClick={() => openEditModal(task.id)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-100 dark:hover:bg-slate-800"
+                          >
+                            <FaPen className="text-[10px]" /> {t(lang, 'editAction')}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(task.id)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-100 dark:hover:bg-slate-800"
+                          >
+                            <FaTrash className="text-[10px]" /> {t(lang, 'deleteAction')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex rounded-full bg-indigo-400 p-0.5 text-[8px] font-bold">
                       
                       <button
                         onClick={() => handleUpdateStatus(task, 'in_progress')}
                         className={`rounded-full px-2 py-1 transition-all ${
-                          isInProgress ? 'bg-white text-indigo-600 shadow dark:bg-slate-900 dark:text-indigo-100' : 'text-indigo-100 dark:text-indigo-200'
+                          isInProgress ? 'bg-indigo-700 text-white shadow dark:bg-indigo-500' : 'text-white dark:text-indigo-500'
                         }`}
                       >
                         {t(lang, 'statusInProgress')}
@@ -771,7 +701,7 @@ export default function CalendarPage() {
                       <button
                         onClick={() => handleUpdateStatus(task, 'completed')}
                         className={`rounded-full px-2 py-1 transition-all ${
-                          isCompleted ? 'bg-indigo-600 text-white shadow dark:bg-indigo-500' : 'text-indigo-100 dark:text-indigo-200'
+                          isCompleted ? 'bg-indigo-700 text-white shadow dark:bg-indigo-500' : 'text-white dark:text-indigo-500'
                         }`}
                       >
                         {t(lang, 'statusDone')}

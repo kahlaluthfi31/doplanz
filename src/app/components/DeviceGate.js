@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { canUseApp } from '@/lib/device';
 import DesktopInstallPage from './DesktopInstallPage';
@@ -18,7 +19,15 @@ export default function DeviceGate({ children }) {
 
     if (allowed === null) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-white dark:bg-slate-950">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white dark:bg-slate-950">
+                <Image
+                    src="/images/doplanz-logo.png"
+                    alt="doplanZ"
+                    width={96}
+                    height={96}
+                    priority
+                    className="h-24 w-24 object-contain"
+                />
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-500" />
             </div>
         );

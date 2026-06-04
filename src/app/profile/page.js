@@ -10,6 +10,8 @@ import AddTaskSheet from '../components/AddTaskSheet';
 import SettingsToggle from '../components/SettingsToggle';
 import { useSettings } from '../components/SettingsProvider';
 import { playNotificationSound, requestNotificationPermission } from '@/lib/notification-sound';
+import { formatLongDateValue } from '@/lib/formatters';
+import { normalizeUser, persistUser, loadStoredUser } from '@/lib/user';
 import {
   FaUser,
   FaEnvelope,
@@ -44,7 +46,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const AUTH_KEY = 'todo_auth';
   const { language, setLanguage } = useLanguage();
-  const { formatDate, refreshSettings } = useSettings();
+  const { formatDate, refreshSettings, locale } = useSettings();
   const modal = useModal();
 
   // Auth state
@@ -204,20 +206,14 @@ export default function ProfilePage() {
     const storedAuth = window.localStorage.getItem(AUTH_KEY);
     if (storedAuth === '1') {
       setIsAuthenticated(true);
-      const storedUser = window.localStorage.getItem('todo_user');
-      if (storedUser) {
-        try {
-          const parsed = JSON.parse(storedUser);
-          setUser(parsed);
-          setEditProfileData({
-            fullName: parsed.fullName || parsed.full_name || '',
-            phone: parsed.phone || ''
-          });
-          // Fetch settings & profile from API
-          fetchUserProfileAndSettings(parsed.id);
-        } catch (e) {
-          console.error(e);
-        }
+      const parsed = loadStoredUser();
+      if (parsed) {
+        setUser(parsed);
+        setEditProfileData({
+          fullName: parsed.fullName || '',
+          phone: parsed.phone || ''
+        });
+        fetchUserProfileAndSettings(parsed.id);
       }
     }
     setIsLoading(false);
@@ -227,10 +223,11 @@ export default function ProfilePage() {
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(AUTH_KEY, '1');
-      if (userData?.id) {
-        window.localStorage.setItem('todo_user', JSON.stringify(userData));
-        setUser(userData);
-        fetchUserProfileAndSettings(userData.id);
+      const normalized = normalizeUser(userData);
+      if (normalized?.id) {
+        persistUser(normalized);
+        setUser(normalized);
+        fetchUserProfileAndSettings(normalized.id);
       }
     }
   };
@@ -765,8 +762,8 @@ export default function ProfilePage() {
   const getJoinedDateFormatted = () => {
     const lang = settings.language || 'id';
     const prefix = t(lang, 'joinedSince');
-    if (!user?.createdAt) return `${prefix} Jan 2025`;
-    return `${prefix} ${formatDate(user.createdAt)}`;
+    if (!user?.createdAt) return `${prefix} Januari 2025`;
+    return `${prefix} ${formatLongDateValue(user.createdAt, locale)}`;
   };
 
   const reminderOptions = [
@@ -802,14 +799,14 @@ export default function ProfilePage() {
             {renderAvatar(true)}
           </button>
 
-          <h2 className="mt-4 text-lg font-bold text-indigo-900">{user?.fullName || 'Kahla Luthfiyah'}</h2>
-          <p className="text-xs text-indigo-400 font-medium">{user?.email || 'livia.vaccaro@example.com'}</p>
+          <h2 className="mt-4 text-lg font-bold text-indigo-700">{user?.fullName || t(settings.language, 'userFallback')}</h2>
+          <p className="text-xs text-indigo-400 font-medium">{user?.email || ''}</p>
           <p className="mt-1 text-[11px] text-white bg-indigo-600 px-3 py-1 rounded-full">{getJoinedDateFormatted()}</p>
         </div>
 
         {/* Section: Akun */}
         <section className="rounded-3xl bg-white p-5 shadow-sm space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400 mb-1">{t(settings.language, 'managementAccount')}</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-300 mb-1">{t(settings.language, 'managementAccount')}</h3>
           <div className="space-y-1">
             <button
               onClick={() => {
@@ -823,8 +820,8 @@ export default function ProfilePage() {
                   <FaUser />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-100">{t(getLang(), 'editProfile')}</p>
-                  <p className="text-[10px] text-indigo-400 dark:text-indigo-300">{t(getLang(), 'namePhone')}</p>
+                  <p className="text-xs font-bold text-indigo-700">{t(getLang(), 'editProfile')}</p>
+                  <p className="text-[10px] text-indigo-600">{t(getLang(), 'namePhone')}</p>
                 </div>
               </div>
               <FaChevronRight className="text-xs text-indigo-300" />
@@ -842,8 +839,8 @@ export default function ProfilePage() {
                   <FaEnvelope />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-100">{t(getLang(), 'changeEmail')}</p>
-                  <p className="text-[10px] text-indigo-400 dark:text-indigo-300">{t(getLang(), 'verifyNewEmail')}</p>
+                  <p className="text-xs font-bold text-indigo-700">{t(getLang(), 'changeEmail')}</p>
+                  <p className="text-[10px] text-indigo-500 dark:text-indigo-300/80">{t(getLang(), 'verifyNewEmail')}</p>
                 </div>
               </div>
               <FaChevronRight className="text-xs text-indigo-300" />
@@ -861,8 +858,8 @@ export default function ProfilePage() {
                   <FaLock />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-indigo-900 dark:text-indigo-100">{t(getLang(), 'changePassword')}</p>
-                  <p className="text-[10px] text-indigo-400 dark:text-indigo-300">{t(getLang(), 'updateAccountKey')}</p>
+                  <p className="text-xs font-bold text-indigo-700">{t(getLang(), 'changePassword')}</p>
+                  <p className="text-[10px] text-indigo-500 dark:text-indigo-300/80">{t(getLang(), 'updateAccountKey')}</p>
                 </div>
               </div>
               <FaChevronRight className="text-xs text-indigo-300" />
@@ -880,8 +877,8 @@ export default function ProfilePage() {
                   <FaTrash />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-indigo-600 dark:text-indigo-300">{t(getLang(), 'deleteAccount')}</p>
-                  <p className="text-[10px] text-indigo-400/80 dark:text-indigo-300/80">{t(getLang(), 'deletePermanent')}</p>
+                  <p className="text-xs font-bold text-indigo-700">{t(getLang(), 'deleteAccount')}</p>
+                  <p className="text-[10px] text-indigo-500 dark:text-indigo-300/80">{t(getLang(), 'deletePermanent')}</p>
                 </div>
               </div>
               <FaChevronRight className="text-xs text-indigo-300" />
@@ -909,7 +906,7 @@ export default function ProfilePage() {
                     key={th.id}
                     onClick={() => updateSetting('theme', th.id)}
                     className={`py-2 rounded-xl text-center transition-all ${settings.theme === th.id
-                        ? 'bg-indigo-600 text-white shadow-sm'
+                        ? 'bg-indigo-600 text-white'
                         : 'text-indigo-700 hover:bg-indigo-600/15 dark:text-indigo-200 dark:hover:bg-indigo-500/20'
                       }`}
                   >
@@ -949,7 +946,7 @@ export default function ProfilePage() {
                     key={f.id}
                     type="button"
                     onClick={() => updateSetting('timeFormat', f.id)}
-                    className={`px-3 py-1 rounded-lg transition-all ${settings.timeFormat === f.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500'
+                    className={`px-3 py-1 rounded-lg transition-all ${settings.timeFormat === f.id ? 'bg-indigo-600 text-white' : 'text-gray-500'
                       }`}
                   >
                     {t(settings.language, f.labelKey)} ({t(settings.language, f.sampleKey)})
@@ -1058,7 +1055,7 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleExportData('JSON')}
-                  className="rounded-lg bg-indigo-600/10 px-2.5 py-1.5 text-[10px] font-bold text-indigo-800 hover:bg-indigo-600/20 transition-all dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                  className="rounded-lg bg-indigo-600/10 px-2.5 py-1.5 text-[10px] font-bold text-indigo-500 dark:text-indigo-200 hover:bg-indigo-600/20 transition-all dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
                 >
                   JSON
                 </button>
@@ -1096,7 +1093,7 @@ export default function ProfilePage() {
               </span>
               <Link
                 href="/archive"
-                className="rounded-lg bg-indigo-600/10 px-3 py-1.5 text-[10px] font-bold text-indigo-800 transition-all hover:bg-indigo-600/20 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                className="rounded-lg bg-indigo-600/10 px-3 py-1.5 text-[10px] font-bold text-indigo-500 transition-all hover:bg-indigo-600/20 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
               >
                 {t(settings.language, 'viewArchive')}
               </Link>
@@ -1153,8 +1150,8 @@ export default function ProfilePage() {
               <button
                 onClick={handleToggle2FA}
                 className={`rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all ${twoFactorEnabled
-                  ? 'bg-emerald-600/10 text-emerald-800 hover:bg-emerald-600/20 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/25'
-                  : 'bg-indigo-600/10 text-indigo-800 hover:bg-indigo-600/20 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25'
+                  ? 'bg-emerald-600/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-200'
+                  : 'bg-indigo-600/10 text-indigo-600 dark:bg-indigo-500/15'
                   }`}
               >
                 {twoFactorEnabled ? t(settings.language, 'active') : t(settings.language, 'setupTOTP')}

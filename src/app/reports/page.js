@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+import UserAvatar from '../components/UserAvatar';
+import { loadStoredUser, syncUserFromApi } from '../../lib/user';
 import { FaPlus } from 'react-icons/fa6';
 import { t } from '../../lib/i18n';
 import { useLanguage } from '../components/LanguageProvider';
@@ -241,11 +242,12 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem('todo_user');
-    if (!stored) return;
-    try {
-      setUser(JSON.parse(stored));
-    } catch (error) { }
+    const parsed = loadStoredUser();
+    if (!parsed?.id) return;
+    setUser(parsed);
+    syncUserFromApi(parsed.id).then((fresh) => {
+      if (fresh) setUser(fresh);
+    });
   }, []);
 
   useEffect(() => {
@@ -417,33 +419,6 @@ export default function ReportsPage() {
     fetchReports();
   }, [userId, start, end, dayNames, lang, locale, logLabels, period, formatDate]);
 
-  // Helper to render user initials or gradient avatar
-  const renderAvatar = () => {
-    const defaultStyle = "h-10 w-10 rounded-full flex items-center justify-center text-white text-xs font-bold ring-2 ring-indigo-100 shadow-md relative";
-    if (user?.avatarUrl) {
-      if (user.avatarUrl.startsWith('linear-gradient') || user.avatarUrl.startsWith('background')) {
-        return (
-          <div className={defaultStyle} style={{ background: user.avatarUrl }}>
-            {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'LV'}
-          </div>
-        );
-      }
-      return (
-        <Image
-          src={user.avatarUrl}
-          alt="User Profile"
-          width={40}
-          height={40}
-          className="h-10 w-10 rounded-full object-cover ring-2 ring-indigo-100 shadow-md"
-        />
-      );
-    }
-    return (
-      <div className={`${defaultStyle} bg-gradient-to-tr from-indigo-500 to-purple-600`}>
-        {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'LV'}
-      </div>
-    );
-  };
 
   return (
     <main className="min-h-screen bg-gray-50 px-6 pb-28 pt-8 font-sans">
@@ -453,7 +428,7 @@ export default function ReportsPage() {
         <header className="space-y-4">
           <div className="flex items-center justify-between">
             <Link href="/profile" className="flex items-center gap-3 active:scale-95 transition-transform">
-              {renderAvatar()}
+              <UserAvatar user={user} size={40} />
               <div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t(lang, 'reportsHeaderSubtitle')}</p>
                 <h1 className="text-base font-extrabold text-indigo-500">{t(lang, 'reportsHeaderTitle')}</h1>
@@ -465,14 +440,14 @@ export default function ReportsPage() {
           </div>
 
           {/* Segments Period Selector */}
-          <div className="grid grid-cols-3 gap-2 dark:bg-gray-100 bg-gray-300 p-1 rounded-full text-[11px] font-extrabold text-center">
+          <div className="grid grid-cols-3 gap-2 bg-gray-200/80 dark:bg-slate-700 p-1 rounded-full text-[11px] font-extrabold text-center">
             {PERIODS.map(item => (
               <button
                 key={item}
                 onClick={() => setPeriod(item)}
                 className={`py-2 rounded-full transition-all duration-200 ${period === item
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-950'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-indigo-800'
                   }`}
               >
                 {periodLabels[item]}

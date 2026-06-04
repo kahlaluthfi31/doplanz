@@ -1,6 +1,8 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
+import UserAvatar from './components/UserAvatar';
+import { normalizeUser, persistUser, syncUserFromApi, loadStoredUser } from '../lib/user';
+import { getTaskDeadlineProgress, isTaskInProgress } from '../lib/task-progress';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import TodoModal from './components/TodoModal';
 import AuthScreen from './components/AuthScreen';
@@ -41,6 +43,7 @@ export default function HomePage() {
   const [currentTodo, setCurrentTodo] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [now, setNow] = useState(() => new Date());
 
   const showAlert = (tone, titleKey, message) =>
     modal.alert({
@@ -111,15 +114,16 @@ export default function HomePage() {
   }, [user?.id]);
 
   useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(AUTH_KEY) : null;
     if (stored === '1') {
       setIsAuthenticated(true);
-      const storedUser = window.localStorage.getItem('todo_user');
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {}
-      }
+      const parsed = loadStoredUser();
+      if (parsed) setUser(parsed);
     }
   }, []);
 
@@ -127,17 +131,9 @@ export default function HomePage() {
     if (isAuthenticated) {
       fetchGroups();
       fetchTodos();
-      // Also sync user data if updated in database
       if (user?.id) {
-        fetch(`/api/users/me`, {
-          headers: { 'x-user-id': user.id }
-        }).then(res => {
-          if (res.ok) {
-            res.json().then(data => {
-              setUser(data);
-              window.localStorage.setItem('todo_user', JSON.stringify(data));
-            });
-          }
+        syncUserFromApi(user.id).then((data) => {
+          if (data) setUser(data);
         });
       }
     }
@@ -190,9 +186,10 @@ export default function HomePage() {
     setIsAuthenticated(true);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(AUTH_KEY, '1');
-      if (userData?.id) {
-        window.localStorage.setItem('todo_user', JSON.stringify(userData));
-        setUser(userData);
+      const normalized = normalizeUser(userData);
+      if (normalized?.id) {
+        persistUser(normalized);
+        setUser(normalized);
       }
     }
   };
@@ -292,7 +289,7 @@ export default function HomePage() {
     }
   };
 
-  const today = useMemo(() => new Date(), []);
+  const today = now;
   const isSameDay = (first, second) => first.toDateString() === second.toDateString();
 
   const isWithinRange = (date, start, end) => date >= start && date <= end;
@@ -364,7 +361,7 @@ export default function HomePage() {
   }, [todos]);
 
   const inProgressTodos = todos
-    .filter(todo => !todo.isCompleted)
+    .filter((todo) => isTaskInProgress(todo, now))
     .slice(0, 6);
 
   // Exquisite design systems
@@ -407,26 +404,6 @@ export default function HomePage() {
     });
   }, [groups, todos]);
 
-  // Helper to render user initials or avatar
-  const renderAvatar = () => {
-    const defaultStyle = "h-11 w-11 rounded-full flex items-center justify-center text-white text-xs font-bold ring-2 ring-indigo-100 shadow-md relative";
-    if (user?.avatarUrl) {
-      return (
-        <Image
-          src={user.avatarUrl}
-          alt="User Profile"
-          width={44}
-          height={44}
-          className="h-11 w-11 rounded-full object-cover ring-2 ring-indigo-100 shadow-md"
-        />
-      );
-    }
-    return (
-      <div className={`${defaultStyle} bg-indigo-500`}>
-        {user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'LV'}
-      </div>
-    );
-  };
 
   if (!isAuthenticated) {
     return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
@@ -439,17 +416,21 @@ export default function HomePage() {
         {/* Dynamic Header */}
         <header className="flex items-center justify-between">
           <Link href="/profile" className="flex items-center gap-3 active:scale-95 transition-transform group">
-            {renderAvatar()}
+            <UserAvatar user={user} size={44} />
             <div>
               <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">{t(lang, 'homeWelcomeBack')}</p>
               <p className="text-sm font-extrabold text-indigo-700 group-hover:text-indigo-600 transition-all">
-                {user?.fullName || 'Kahla Luthfiyah'}
+                {user?.fullName || t(lang, 'userFallback')}
               </p>
             </div>
           </Link>
-          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-indigo-400 hover:text-indigo-600">
+          <Link
+            href="/notifications"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm hover:scale-105 active:scale-95 transition-all text-indigo-400 hover:text-indigo-600"
+            aria-label={t(lang, 'notifications')}
+          >
             <FaRegBell className="text-base" />
-          </button>
+          </Link>
         </header>
 
         {/* Breathtaking Progress Card */}
@@ -470,7 +451,28 @@ export default function HomePage() {
           </div>
 
           <div className="relative h-20 w-20 flex items-center justify-center z-10">
-            <div className="absolute inset-0 rounded-full border-4 border-white/30" />
+            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 80 80" aria-hidden="true">
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                fill="none"
+                stroke="rgba(255,255,255,0.25)"
+                strokeWidth="4"
+              />
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 36}
+                strokeDashoffset={2 * Math.PI * 36 * (1 - progressPercent / 100)}
+                className="transition-all duration-500"
+              />
+            </svg>
             <div className="absolute inset-1.5 rounded-full bg-indigo-700 flex flex-col items-center justify-center">
               <span className="text-sm font-extrabold leading-none">{progressPercent}%</span>
               <span className="text-[8px] text-indigo-200 mt-0.5">
@@ -504,6 +506,7 @@ export default function HomePage() {
               <div className="flex gap-4 px-6 pb-2">
                 {inProgressTodos.map((todo, index) => {
                   const palette = inProgressPalette[index % inProgressPalette.length];
+                  const taskProgress = getTaskDeadlineProgress(todo, now);
                   return (
                     <div
                       key={todo._id}
@@ -533,10 +536,13 @@ export default function HomePage() {
                       <div className="mt-4 space-y-2">
                         <div className="flex justify-between items-center text-[9px] text-white/70 font-semibold">
                           <span>{t(lang, 'homeProgress')}</span>
-                          <span className={palette.text}>50%</span>
+                          <span className={palette.text}>{taskProgress}%</span>
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
-                          <div className={`h-full rounded-full ${palette.bar} w-1/2`} />
+                          <div
+                            className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                            style={{ width: `${taskProgress}%` }}
+                          />
                         </div>
                         <p className="text-[9px] text-white/70 font-medium">{t(lang, 'homeDueDate', { date: formatShortDate(todo.dueDate) })}</p>
                       </div>
@@ -650,8 +656,8 @@ export default function HomePage() {
         </section>
 
         {/* Premium Quick Stats */}
-        <section className="rounded-3xl bg-white p-5 shadow-sm border border-indigo-50 space-y-4">
-          <div className="flex items-center justify-between border-b border-indigo-50 pb-3">
+        <section className="rounded-3xl bg-white p-5 shadow-sm border border-indigo-50 space-y-4 dark:bg-slate-900 dark:border-slate-800">
+          <div className="flex items-center justify-between border-b border-indigo-50 pb-3 dark:border-slate-800">
             <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">{t(lang, 'homeStatsSummary')}</h3>
             <span
               className={`flex items-center gap-1 text-[9px] font-bold text-white px-2 py-0.5 rounded-full ${
@@ -668,17 +674,17 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-2xl bg-indigo-200 p-3 transition-colors">
-              <p className="text-xl font-black text-white dark:text-indigo-500">{todos.length}</p>
-              <p className="text-[9px] text-white dark:text-indigo-500 font-bold uppercase mt-1">{t(lang, 'homeTotal')}</p>
+            <div className="rounded-2xl bg-indigo-500 p-3 dark:bg-slate-800">
+              <p className="text-xl font-black text-white">{todos.length}</p>
+              <p className="text-[9px] text-indigo-100 font-bold uppercase mt-1 dark:text-slate-300">{t(lang, 'homeTotal')}</p>
             </div>
-            <div className="rounded-2xl bg-indigo-200 p-3 transition-colors">
-              <p className="text-xl font-black text-white dark:text-indigo-500">{completedToday}</p>
-              <p className="text-[9px] text-white dark:text-indigo-500 font-bold uppercase mt-1">{t(lang, 'homeCompleted')}</p>
+            <div className="rounded-2xl bg-indigo-500 p-3 dark:bg-slate-800">
+              <p className="text-xl font-black text-white">{completedToday}</p>
+              <p className="text-[9px] text-indigo-100 font-bold uppercase mt-1 dark:text-slate-300">{t(lang, 'homeCompleted')}</p>
             </div>
-            <div className="rounded-2xl bg-indigo-200 p-3 transition-colors">
-              <p className="text-xl font-black text-white dark:text-indigo-500">{pendingToday}</p>
-              <p className="text-[9px] text-white dark:text-indigo-500 font-bold uppercase mt-1">{t(lang, 'homePending')}</p>
+            <div className="rounded-2xl bg-indigo-500 p-3 dark:bg-slate-800">
+              <p className="text-xl font-black text-white">{pendingToday}</p>
+              <p className="text-[9px] text-indigo-100 font-bold uppercase mt-1 dark:text-slate-300">{t(lang, 'homePending')}</p>
             </div>
           </div>
         </section>

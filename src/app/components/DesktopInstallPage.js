@@ -61,7 +61,7 @@ export default function DesktopInstallPage() {
         <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-indigo-50 via-white to-indigo-50 px-6 py-12 font-sans text-indigo-950">
             <div className="mx-auto w-full max-w-md space-y-8 text-center">
                 <div className="flex justify-center">
-                    <div className="rounded-2xl bg-white px-6 py-4 shadow-lg ring-2 ring-indigo-100 dark:ring-indigo-200">
+                    <div className="rounded-full bg-white px-6 py-4 shadow-lg ring-2 ring-indigo-100 dark:ring-indigo-200">
                         <Image
                             src="/images/doplanz-logo.png"
                             alt="doplanZ"
@@ -75,9 +75,6 @@ export default function DesktopInstallPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500 text-white shadow-lg">
-                        <FaMobileScreen className="text-2xl" />
-                    </div>
                     <h1 className="text-xl font-extrabold text-indigo-900">
                         {t(lang, 'installDesktopTitle')}
                     </h1>

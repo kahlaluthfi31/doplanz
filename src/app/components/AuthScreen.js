@@ -204,12 +204,7 @@ export default function AuthScreen({ onAuthSuccess }) {
         }
     };
 
-    const statusClass =
-        status.type === 'error'
-            ? 'bg-red-50 text-red-600'
-            : status.type === 'info'
-              ? 'bg-blue-50 text-blue-600'
-              : 'bg-green-50 text-green-600';
+    const statusClass = 'bg-indigo-300 text-white font-medium';
 
     const googleSection = (
         <>
@@ -265,12 +260,12 @@ export default function AuthScreen({ onAuthSuccess }) {
                         <div className="text-center">
                             <div className="flex justify-center">
                                 <Image
-                                    src="/images/doplanz-logo.png"
+                                    src="/images/doplanz-logo-horizontal.png"
                                     alt="doplanZ"
-                                    width={140}
-                                    height={36}
+                                    width={200}
+                                    height={48}
                                     priority
-                                    className="h-auto"
+                                    className="h-auto w-[200px] max-w-full object-contain"
                                 />
                             </div>
                             <p className="text-sm text-indigo-500">

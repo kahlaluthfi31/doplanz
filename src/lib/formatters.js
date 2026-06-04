@@ -51,3 +51,10 @@ export function getLocaleFromLanguage(lang) {
   if (lang === 'su') return 'id-ID';
   return 'id-ID';
 }
+
+export function formatLongDateValue(dateInput, locale = 'id-ID') {
+  if (!dateInput) return '';
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+}
