@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
+import { verifyTotpCode } from '@/lib/two-factor';
 import User from '@/models/User';
+import UserSettings from '@/models/UserSettings';
 
 export async function POST(req) {
   try {
     await connectDB();
     const body = await req.json();
-    const { email } = body;
+    const { email, totpCode, newPassword } = body;
 
     if (!email) {
       return NextResponse.json({ message: 'Email wajib diisi.' }, { status: 400 });
@@ -26,6 +29,38 @@ export async function POST(req) {
       return NextResponse.json({
         message: 'Akun ini menggunakan Google. Silakan masuk dengan Google.',
         useGoogle: true
+      });
+    }
+
+    const settings = await UserSettings.findOne({ userId: user._id });
+
+    if (settings?.twoFactorEnabled && settings.twoFactorSecret) {
+      if (!totpCode || !newPassword) {
+        return NextResponse.json({
+          requiresTwoFactor: true,
+          email: user.email,
+          message: 'Masukkan kode TOTP dari aplikasi autentikator dan password baru Anda.'
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return NextResponse.json({ message: 'Password minimal 6 karakter.' }, { status: 400 });
+      }
+
+      const validTotp = await verifyTotpCode(settings.twoFactorSecret, totpCode);
+      if (!validTotp) {
+        return NextResponse.json({ message: 'Kode TOTP salah.' }, { status: 401 });
+      }
+
+      user.passwordHash = await bcrypt.hash(newPassword, 10);
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+
+      return NextResponse.json({
+        message: 'Password berhasil direset. Silakan masuk dengan password baru.',
+        useGoogle: false,
+        resetComplete: true
       });
     }
 

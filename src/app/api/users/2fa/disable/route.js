@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { verify } from 'otplib';
 import { connectDB } from '@/lib/db';
+import { verifyTotpCode } from '@/lib/two-factor';
 import UserSettings from '@/models/UserSettings';
 
 export async function POST(req) {
@@ -19,9 +19,9 @@ export async function POST(req) {
     }
 
     if (settings.twoFactorSecret) {
-      const result = await verify({ token: String(code || '').trim(), secret: settings.twoFactorSecret });
-      if (!result.valid) {
-        return NextResponse.json({ message: 'Kode verifikasi salah.' }, { status: 400 });
+      const valid = await verifyTotpCode(settings.twoFactorSecret, code);
+      if (!valid) {
+        return NextResponse.json({ message: 'Kode TOTP salah.' }, { status: 400 });
       }
     }
 

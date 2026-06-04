@@ -58,15 +58,15 @@ export default function DesktopInstallPage() {
     }, [appUrl]);
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-indigo-50 via-white to-indigo-50 px-6 py-12 font-sans text-indigo-950">
+        <main className="flex min-h-screen flex-col items-center justify-center px-6 py-12 font-sans text-indigo-950">
             <div className="mx-auto w-full max-w-md space-y-8 text-center">
                 <div className="flex justify-center">
-                    <div className="rounded-full bg-white px-6 py-4 shadow-lg ring-2 ring-indigo-100 dark:ring-indigo-200">
+                    <div className="rounded-full px-6 py-4">
                         <Image
                             src="/images/doplanz-logo.png"
                             alt="doplanZ"
-                            width={160}
-                            height={48}
+                            width={50}
+                            height={50}
                             priority
                             className="h-auto w-[160px] max-w-none object-contain"
                             unoptimized
@@ -92,8 +92,8 @@ export default function DesktopInstallPage() {
                         <img
                             src={qrSrc}
                             alt="QR"
-                            width={220}
-                            height={220}
+                            width={70}
+                            height={70}
                             className="mx-auto rounded-xl"
                         />
                         <p className="mt-3 break-all text-[11px] font-semibold text-indigo-700">

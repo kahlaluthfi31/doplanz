@@ -27,7 +27,12 @@ export default function AuthScreen({ onAuthSuccess }) {
     const [status, setStatus] = useState({ loading: false, message: '', type: '' });
     const [forgotUseGoogle, setForgotUseGoogle] = useState(false);
     const [pending2FAEmail, setPending2FAEmail] = useState('');
+    const [pending2FAToken, setPending2FAToken] = useState('');
     const [twoFactorLoginCode, setTwoFactorLoginCode] = useState('');
+    const [forgotRequires2FA, setForgotRequires2FA] = useState(false);
+    const [forgotTotpCode, setForgotTotpCode] = useState('');
+    const [forgotNewPassword, setForgotNewPassword] = useState('');
+    const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
     const [showForm, setShowForm] = useState(false);
     const formRef = useRef(null);
 
@@ -72,6 +77,17 @@ export default function AuthScreen({ onAuthSuccess }) {
                 return;
             }
 
+            if (data.requiresTwoFactor) {
+                setPending2FAEmail(data.email || '');
+                setPending2FAToken(data.pendingToken || '');
+                setStatus({
+                    loading: false,
+                    message: data.message || 'Masukkan kode TOTP dari aplikasi autentikator.',
+                    type: 'info'
+                });
+                return;
+            }
+
             setStatus({
                 loading: false,
                 message: 'Login dengan Google berhasil!',
@@ -107,6 +123,19 @@ export default function AuthScreen({ onAuthSuccess }) {
                 return;
             }
 
+            if (data.requiresTwoFactor) {
+                setForgotRequires2FA(true);
+                setForgotTotpCode('');
+                setForgotNewPassword('');
+                setForgotConfirmPassword('');
+                setStatus({
+                    loading: false,
+                    message: data.message || 'Masukkan kode TOTP dan password baru.',
+                    type: 'info'
+                });
+                return;
+            }
+
             setForgotUseGoogle(Boolean(data.useGoogle));
             setStatus({
                 loading: false,
@@ -123,6 +152,56 @@ export default function AuthScreen({ onAuthSuccess }) {
         }
     };
 
+    const handleForgotTotpReset = async (event) => {
+        event.preventDefault();
+
+        if (forgotNewPassword !== forgotConfirmPassword) {
+            setStatus({ loading: false, message: 'Konfirmasi password tidak cocok.', type: 'error' });
+            return;
+        }
+
+        if (forgotNewPassword.length < 6) {
+            setStatus({ loading: false, message: 'Password minimal 6 karakter.', type: 'error' });
+            return;
+        }
+
+        setStatus({ loading: true, message: '', type: '' });
+
+        try {
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: forgotForm.email,
+                    totpCode: forgotTotpCode,
+                    newPassword: forgotNewPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setStatus({ loading: false, message: data.message || 'Gagal mereset password.', type: 'error' });
+                return;
+            }
+
+            setForgotRequires2FA(false);
+            setForgotTotpCode('');
+            setForgotNewPassword('');
+            setForgotConfirmPassword('');
+            setMode('login');
+            setLoginForm({ email: forgotForm.email, password: '' });
+            setStatus({
+                loading: false,
+                message: data.message || 'Password berhasil direset. Silakan masuk.',
+                type: 'success'
+            });
+        } catch (error) {
+            console.error('Forgot password TOTP reset error:', error);
+            setStatus({ loading: false, message: 'Gagal terhubung ke server.', type: 'error' });
+        }
+    };
+
     const handleVerify2FALogin = async (event) => {
         event.preventDefault();
         setStatus({ loading: true, message: '', type: '' });
@@ -133,7 +212,8 @@ export default function AuthScreen({ onAuthSuccess }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: pending2FAEmail,
-                    code: twoFactorLoginCode
+                    code: twoFactorLoginCode,
+                    pendingToken: pending2FAToken
                 })
             });
             const data = await response.json();
@@ -177,9 +257,11 @@ export default function AuthScreen({ onAuthSuccess }) {
 
             if (isLogin && data.requiresTwoFactor) {
                 setPending2FAEmail(data.email || loginForm.email);
+                setPending2FAToken(data.pendingToken || '');
+                setTwoFactorLoginCode('');
                 setStatus({
                     loading: false,
-                    message: data.message || 'Masukkan kode 2FA.',
+                    message: data.message || 'Masukkan kode TOTP dari aplikasi autentikator.',
                     type: 'info'
                 });
                 return;
@@ -285,6 +367,70 @@ export default function AuthScreen({ onAuthSuccess }) {
 
                         {isForgot ? (
                             <>
+                                {forgotRequires2FA ? (
+                                    <form className="space-y-4 mt-6" onSubmit={handleForgotTotpReset}>
+                                        <p className="text-xs text-gray-500 text-center">
+                                            Akun <span className="font-semibold">{forgotForm.email}</span> dilindungi TOTP.
+                                            Masukkan kode dari aplikasi autentikator dan password baru.
+                                        </p>
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-500">Kode TOTP (6 digit)</label>
+                                            <input
+                                                type="text"
+                                                maxLength={6}
+                                                required
+                                                value={forgotTotpCode}
+                                                onChange={(e) => setForgotTotpCode(e.target.value.replace(/\D/g, ''))}
+                                                className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                placeholder="000000"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-500">Password baru</label>
+                                            <input
+                                                type="password"
+                                                required
+                                                minLength={6}
+                                                value={forgotNewPassword}
+                                                onChange={(e) => setForgotNewPassword(e.target.value)}
+                                                className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                placeholder="Minimal 6 karakter"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-medium text-gray-500">Konfirmasi password</label>
+                                            <input
+                                                type="password"
+                                                required
+                                                minLength={6}
+                                                value={forgotConfirmPassword}
+                                                onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                                                className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                placeholder="Ulangi password baru"
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            disabled={status.loading}
+                                            className="w-full rounded-full bg-indigo-600 text-white py-3 text-sm font-semibold shadow-md hover:bg-indigo-700 transition disabled:opacity-60"
+                                        >
+                                            {status.loading ? 'Processing...' : 'Reset password'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setForgotRequires2FA(false);
+                                                setForgotTotpCode('');
+                                                setForgotNewPassword('');
+                                                setForgotConfirmPassword('');
+                                                setStatus({ loading: false, message: '', type: '' });
+                                            }}
+                                            className="w-full text-xs text-gray-400"
+                                        >
+                                            Kembali
+                                        </button>
+                                    </form>
+                                ) : (
                                 <form className="space-y-4 mt-6" onSubmit={handleForgotSubmit}>
                                     <div>
                                         <label className="text-xs font-medium text-gray-500">Email</label>
@@ -307,6 +453,7 @@ export default function AuthScreen({ onAuthSuccess }) {
                                         {status.loading ? 'Processing...' : 'Send reset instructions'}
                                     </button>
                                 </form>
+                                )}
 
                                 {forgotUseGoogle && (
                                     <p className="mt-3 text-center text-xs text-gray-500">
@@ -323,6 +470,7 @@ export default function AuthScreen({ onAuthSuccess }) {
                                         onClick={() => {
                                             setMode('login');
                                             setForgotUseGoogle(false);
+                                            setForgotRequires2FA(false);
                                             setStatus({ loading: false, message: '', type: '' });
                                         }}
                                         className="ml-1 text-indigo-500"
@@ -334,10 +482,13 @@ export default function AuthScreen({ onAuthSuccess }) {
                         ) : pending2FAEmail ? (
                             <form className="space-y-4 mt-6" onSubmit={handleVerify2FALogin}>
                                 <p className="text-xs text-gray-500 text-center">
-                                    Verifikasi 2FA untuk <span className="font-semibold">{pending2FAEmail}</span>
+                                    Verifikasi TOTP untuk <span className="font-semibold">{pending2FAEmail}</span>
+                                </p>
+                                <p className="text-[11px] text-gray-400 text-center">
+                                    Buka aplikasi autentikator (Google Authenticator, Authy, dll.) dan masukkan kode 6 digit.
                                 </p>
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500">Kode 2FA (6 digit)</label>
+                                    <label className="text-xs font-medium text-gray-500">Kode TOTP (6 digit)</label>
                                     <input
                                         type="text"
                                         maxLength={6}
@@ -359,6 +510,7 @@ export default function AuthScreen({ onAuthSuccess }) {
                                     type="button"
                                     onClick={() => {
                                         setPending2FAEmail('');
+                                        setPending2FAToken('');
                                         setTwoFactorLoginCode('');
                                     }}
                                     className="w-full text-xs text-gray-400"

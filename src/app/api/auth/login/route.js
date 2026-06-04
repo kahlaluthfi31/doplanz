@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import { serializeUser } from '@/lib/auth';
+import { issuePendingAuth } from '@/lib/two-factor';
 import User from '@/models/User';
 import UserSettings from '@/models/UserSettings';
+import { createUUID } from '@/models/utils';
 
 export async function POST(req) {
   try {
@@ -36,12 +38,18 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Email atau password salah.' }, { status: 401 });
     }
 
-    const settings = await UserSettings.findOne({ userId: user._id });
-    if (settings?.twoFactorEnabled) {
+    let settings = await UserSettings.findOne({ userId: user._id });
+    if (!settings) {
+      settings = new UserSettings({ _id: createUUID(), userId: user._id });
+    }
+
+    if (settings.twoFactorEnabled && settings.twoFactorSecret) {
+      const pendingToken = await issuePendingAuth(settings);
       return NextResponse.json({
         requiresTwoFactor: true,
         email: user.email,
-        message: 'Masukkan kode 2FA dari aplikasi autentikator Anda.'
+        pendingToken,
+        message: 'Masukkan kode TOTP dari aplikasi autentikator Anda.'
       });
     }
 

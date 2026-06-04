@@ -16,7 +16,9 @@ const userSettingsSchema = new mongoose.Schema(
     reminderDefault: { type: Number, default: 15 },
     autoArchiveDays: { type: Number, default: 0 },
     twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: { type: String, default: null }
+    twoFactorSecret: { type: String, default: null },
+    pendingAuthToken: { type: String, default: null },
+    pendingAuthExpires: { type: Date, default: null }
   },
   { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }
 );

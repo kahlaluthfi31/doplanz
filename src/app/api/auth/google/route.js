@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { serializeUser } from '@/lib/auth';
 import { findOrCreateGoogleUser, verifyGoogleCredential } from '@/lib/google-auth';
+import { issuePendingAuth } from '@/lib/two-factor';
 import UserSettings from '@/models/UserSettings';
+import { createUUID } from '@/models/utils';
 
 export async function POST(req) {
   try {
@@ -23,13 +25,18 @@ export async function POST(req) {
 
     const payload = await verifyGoogleCredential(credential);
     const user = await findOrCreateGoogleUser(payload);
-    const settings = await UserSettings.findOne({ userId: user._id });
+    let settings = await UserSettings.findOne({ userId: user._id });
+    if (!settings) {
+      settings = new UserSettings({ _id: createUUID(), userId: user._id });
+    }
 
-    if (settings?.twoFactorEnabled) {
+    if (settings.twoFactorEnabled && settings.twoFactorSecret) {
+      const pendingToken = await issuePendingAuth(settings);
       return NextResponse.json({
         requiresTwoFactor: true,
         email: user.email,
-        message: 'Akun ini memerlukan kode 2FA. Masuk dengan email/password lalu verifikasi 2FA.'
+        pendingToken,
+        message: 'Masukkan kode TOTP dari aplikasi autentikator Anda.'
       });
     }
 
