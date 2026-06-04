@@ -65,8 +65,8 @@ export default function DesktopInstallPage() {
                         <Image
                             src="/images/doplanz-logo.png"
                             alt="doplanZ"
-                            width={50}
-                            height={50}
+                            width={25}
+                            height={25}
                             priority
                             className="h-auto w-[160px] max-w-none object-contain"
                             unoptimized
@@ -84,7 +84,7 @@ export default function DesktopInstallPage() {
                 </div>
 
                 {qrSrc && (
-                    <div className="rounded-3xl border border-indigo-100 bg-white p-5 shadow-md">
+                    <div className="p-5">
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                             {t(lang, 'installDesktopScan')}
                         </p>
@@ -92,8 +92,8 @@ export default function DesktopInstallPage() {
                         <img
                             src={qrSrc}
                             alt="QR"
-                            width={70}
-                            height={70}
+                            width={100}
+                            height={100}
                             className="mx-auto rounded-xl"
                         />
                         <p className="mt-3 break-all text-[11px] font-semibold text-indigo-700">
