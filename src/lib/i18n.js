@@ -341,6 +341,10 @@ export const TRANSLATIONS = {
     installDesktopHint: 'Di komputer, tombol ini hanya mengunduh file panduan (HTML). Aplikasi tidak terpasang sebagai program desktop. Buka situs di HP/tablet lalu pilih Tambahkan ke Layar Utama.',
     installDesktopScan: 'Pindai dengan kamera HP',
     installMobileTitle: 'Pasang doplanZ di layar utama',
+    installMobileLandingSubtitle: 'Untuk pengalaman terbaik, pasang aplikasi ke layar utama HP Anda, lalu lanjutkan.',
+    installMobileLandingHint: 'Disarankan memilih Tambahkan ke Layar Utama / Install aplikasi sebelum melanjutkan.',
+    installMobileContinue: 'Lanjutkan ke aplikasi',
+    installMobileStepsTitle: 'Cara memasang:',
     installMobileButton: 'Install aplikasi',
     installIosHint: 'Di iPhone/iPad: tap ikon Share (kotak dengan panah) → "Add to Home Screen" / "Tambahkan ke Layar Utama".',
     installAndroidHint: 'Di Chrome Android: menu ⋮ → "Install app" / "Tambahkan ke Layar Utama".'
@@ -685,6 +689,10 @@ export const TRANSLATIONS = {
     installDesktopHint: 'On a computer, this button only downloads a guide file (HTML). The app will not install as desktop software. Open the site on your phone/tablet and choose Add to Home Screen.',
     installDesktopScan: 'Scan with your phone camera',
     installMobileTitle: 'Install doplanZ on your home screen',
+    installMobileLandingSubtitle: 'For the best experience, add the app to your home screen, then continue.',
+    installMobileLandingHint: 'We recommend Add to Home Screen / Install app before continuing.',
+    installMobileContinue: 'Continue to app',
+    installMobileStepsTitle: 'How to install:',
     installMobileButton: 'Install app',
     installIosHint: 'On iPhone/iPad: tap Share → "Add to Home Screen".',
     installAndroidHint: 'On Chrome Android: menu ⋮ → "Install app" or "Add to Home screen".'

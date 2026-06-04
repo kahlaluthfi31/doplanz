@@ -450,32 +450,32 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="relative h-20 w-20 flex items-center justify-center z-10">
-            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 80 80" aria-hidden="true">
+          <div className="relative h-[88px] w-[88px] shrink-0 flex items-center justify-center z-10">
+            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 88 88" aria-hidden="true">
               <circle
-                cx="40"
-                cy="40"
-                r="36"
+                cx="44"
+                cy="44"
+                r="38"
                 fill="none"
                 stroke="rgba(255,255,255,0.25)"
                 strokeWidth="4"
               />
               <circle
-                cx="40"
-                cy="40"
-                r="36"
+                cx="44"
+                cy="44"
+                r="38"
                 fill="none"
                 stroke="#22c55e"
                 strokeWidth="4"
                 strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 36}
-                strokeDashoffset={2 * Math.PI * 36 * (1 - progressPercent / 100)}
+                strokeDasharray={2 * Math.PI * 38}
+                strokeDashoffset={2 * Math.PI * 38 * (1 - progressPercent / 100)}
                 className="transition-all duration-500"
               />
             </svg>
-            <div className="absolute inset-1.5 rounded-full bg-indigo-700 flex flex-col items-center justify-center">
-              <span className="text-sm font-extrabold leading-none">{progressPercent}%</span>
-              <span className="text-[8px] text-indigo-200 mt-0.5">
+            <div className="absolute inset-[10px] rounded-full bg-indigo-700 flex flex-col items-center justify-center px-1 text-center overflow-hidden">
+              <span className="text-[11px] font-extrabold leading-none tabular-nums">{progressPercent}%</span>
+              <span className="text-[7px] text-indigo-200 leading-tight mt-0.5 max-w-full line-clamp-2">
                 {t(lang, 'homeDoneCount', { completed: completedToday, total: totalToday })}
               </span>
             </div>

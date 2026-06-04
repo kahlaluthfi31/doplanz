@@ -10,11 +10,15 @@ export default function DeviceGate({ children }) {
     const [allowed, setAllowed] = useState(null);
 
     useEffect(() => {
-        setAllowed(canUseApp());
+        const sync = () => setAllowed(canUseApp());
+        sync();
 
         if ('serviceWorker' in navigator && canUseApp()) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
+
+        window.addEventListener('doplanz-install-ack', sync);
+        return () => window.removeEventListener('doplanz-install-ack', sync);
     }, []);
 
     if (allowed === null) {

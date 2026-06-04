@@ -40,6 +40,31 @@ export function allowDesktopDevBypass() {
     return host === 'localhost' || host === '127.0.0.1';
 }
 
+const INSTALL_ACK_KEY = 'doplanz_install_acknowledged';
+
+export function hasAcknowledgedInstall() {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(INSTALL_ACK_KEY) === '1';
+}
+
+export function acknowledgeInstall() {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(INSTALL_ACK_KEY, '1');
+}
+
+/** Show install landing before the main app (desktop always; mobile browser until user continues or installs PWA). */
+export function shouldShowInstallPage() {
+    if (typeof window === 'undefined') return false;
+    if (allowDesktopDevBypass()) return false;
+    if (isStandalonePwa()) return false;
+    if (!isMobileOrTablet()) return true;
+    return !hasAcknowledgedInstall();
+}
+
 export function canUseApp() {
-    return isMobileOrTablet() || allowDesktopDevBypass();
+    if (typeof window === 'undefined') return true;
+    if (allowDesktopDevBypass()) return true;
+    if (isStandalonePwa()) return true;
+    if (!isMobileOrTablet()) return false;
+    return hasAcknowledgedInstall();
 }
